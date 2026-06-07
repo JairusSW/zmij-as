@@ -1,15 +1,15 @@
 #!/bin/bash
-# Build benchmark charts and publish them to the `docs` branch under a *versioned*
-# directory: charts/v<package.json version>/. The README's <img> tags pin to that
-# path, so each release's README shows a frozen chart set (regenerating a later
-# version never rewrites an older README's images).
+# Build benchmark charts and publish them to the `docs` branch under a per-commit
+# directory: charts/<short HEAD sha>/. Old chart folders are pruned — only the
+# latest commit's charts are kept. The README's <img> tags are re-pinned to the
+# published sha, so a README revision references the charts built from its code.
 #
 # Adapted from json-as/scripts/publish-benchmarks.sh (worktree -> docs branch).
 #
 # Usage:
 #   ./scripts/publish-charts.sh [--no-run] [--v8|--wavm|--wasmtime|--wazero ...]
 #     --no-run   reuse existing build/logs instead of re-running benches
-#     runtime    one or more; defaults to --v8 (matches the README perf table)
+#     runtime    one or more; defaults to --wavm (matches the embedded charts)
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,7 +17,7 @@ cd "$ROOT_DIR"
 
 REMOTE_NAME="${REMOTE_NAME:-origin}"
 DOCS_BRANCH="${DOCS_BRANCH:-docs}"
-VERSION="$(node -p "require('./package.json').version")"
+SHA="$(git rev-parse --short HEAD)"
 RUN_BENCHES=1
 RT_ARGS=()
 TMP_CHARTS_DIR="$(mktemp -d)"
@@ -35,8 +35,8 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-# Default runtime: V8 (the README perf table + embedded charts are node/V8).
-[[ ${#RT_ARGS[@]} -eq 0 ]] && RT_ARGS=(--v8)
+# Default runtime: WAVM (LLVM AOT; matches the embedded README charts).
+[[ ${#RT_ARGS[@]} -eq 0 ]] && RT_ARGS=(--wavm)
 
 cleanup() {
   rm -rf "$TMP_CHARTS_DIR"
@@ -82,28 +82,28 @@ else
   ( cd "$TMP_DOCS_DIR"; git checkout --orphan "$DOCS_BRANCH" >/dev/null; git rm -rf . >/dev/null 2>&1 || true )
 fi
 
-echo "Updating charts/v${VERSION} on ${DOCS_BRANCH}..."
-rm -rf "$TMP_DOCS_DIR/charts/v${VERSION}"
-mkdir -p "$TMP_DOCS_DIR/charts/v${VERSION}"
-cp -R "$TMP_CHARTS_DIR/." "$TMP_DOCS_DIR/charts/v${VERSION}/"
+echo "Updating charts/${SHA} on ${DOCS_BRANCH} (pruning old chart folders)..."
+rm -rf "$TMP_DOCS_DIR/charts"
+mkdir -p "$TMP_DOCS_DIR/charts/${SHA}"
+cp -R "$TMP_CHARTS_DIR/." "$TMP_DOCS_DIR/charts/${SHA}/"
 
 (
   cd "$TMP_DOCS_DIR"
-  git add "charts/v${VERSION}"
+  git add -A charts
   if git diff --cached --quiet; then
-    echo "No chart changes to publish for v${VERSION}."
+    echo "No chart changes to publish for ${SHA}."
     exit 0
   fi
   git config user.name "${GIT_AUTHOR_NAME:-$(git config --get user.name || echo zmij-as)}"
   git config user.email "${GIT_AUTHOR_EMAIL:-$(git config --get user.email || echo zmij-as@example.com)}"
-  git commit -m "Update benchmark charts for v${VERSION} [skip ci]" >/dev/null
+  git commit -m "Update benchmark charts for ${SHA} [skip ci]" >/dev/null
   git push "$REMOTE_NAME" "$DOCS_BRANCH"
 )
 
-# Re-pin the README's chart <img> URLs to the version just published, so the
-# baked-in charts always match this release. Leaves the edit uncommitted for review.
-echo "Pinning README chart URLs to v${VERSION}..."
-sed -i -E "s#(/docs/charts/)v[0-9]+\.[0-9]+\.[0-9]+/#\1v${VERSION}/#g" README.md
+# Re-pin the README chart <img> URLs to the commit just published, so a README
+# revision references the charts built from its own code. Left uncommitted.
+echo "Pinning README chart URLs to ${SHA}..."
+sed -i -E "s#(/docs/charts/)[^/]+/#\1${SHA}/#g" README.md
 
-echo "Charts published to ${REMOTE_NAME}/${DOCS_BRANCH}:charts/v${VERSION}/"
-echo "README pinned to https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v${VERSION}/"
+echo "Charts published to ${REMOTE_NAME}/${DOCS_BRANCH}:charts/${SHA}/ (old folders pruned)"
+echo "README pinned to https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/${SHA}/"
