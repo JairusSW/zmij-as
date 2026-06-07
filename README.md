@@ -106,13 +106,13 @@ with the buffered API. All power-of-ten tables are baked at compile time, so the
 is no module-init cost and no runtime LUT construction.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/807a747/dtoa-comp-f64-wavm.png" alt="dtoa (f64) latency vs the AssemblyScript stdlib, by input complexity">
+<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/01-e4fdb8e/dtoa-comp-f64-wavm.png" alt="dtoa (f64) latency vs the AssemblyScript stdlib, by input complexity">
 </p>
 <p align="center">
-<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/807a747/dtoa-comp-f32-wavm.png" alt="ftoa (f32) latency vs the AssemblyScript stdlib, by input complexity">
+<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/01-e4fdb8e/dtoa-comp-f32-wavm.png" alt="ftoa (f32) latency vs the AssemblyScript stdlib, by input complexity">
 </p>
 <p align="center">
-<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/807a747/dtoa-stages-f64-wavm.png" alt="dtoa (f64) per-stage latency breakdown">
+<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/01-e4fdb8e/dtoa-stages-f64-wavm.png" alt="dtoa (f64) per-stage latency breakdown">
 </p>
 
 Charts are published per release to the `docs` branch via `npm run charts:publish`

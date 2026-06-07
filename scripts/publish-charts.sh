@@ -1,8 +1,10 @@
 #!/bin/bash
-# Build benchmark charts and publish them to the `docs` branch under a per-commit
-# directory: charts/<short HEAD sha>/. Old chart folders are pruned — only the
-# latest commit's charts are kept. The README's <img> tags are re-pinned to the
-# published sha, so a README revision references the charts built from its code.
+# Build benchmark charts and publish them to the `docs` branch under
+# charts/v<version>/<NN>-<short HEAD sha>/. NN is a zero-padded, per-version
+# sequence so folders sort lexically and the highest NN is the latest update for
+# that version. The README's <img> tags are re-pinned to the published path, so a
+# README revision references the charts built from its code. (Re-publishing the
+# same commit overwrites its folder rather than allocating a new NN.)
 #
 # Adapted from json-as/scripts/publish-benchmarks.sh (worktree -> docs branch).
 #
@@ -18,6 +20,9 @@ cd "$ROOT_DIR"
 REMOTE_NAME="${REMOTE_NAME:-origin}"
 DOCS_BRANCH="${DOCS_BRANCH:-docs}"
 SHA="$(git rev-parse --short HEAD)"
+VERSION="$(node -p "require('./package.json').version")"
+# DEST (charts/v<version>/<NN>-<commit>/) is computed after the docs worktree is
+# ready, so the NN sequence can be derived from what's already published.
 RUN_BENCHES=1
 RT_ARGS=()
 TMP_CHARTS_DIR="$(mktemp -d)"
@@ -82,28 +87,42 @@ else
   ( cd "$TMP_DOCS_DIR"; git checkout --orphan "$DOCS_BRANCH" >/dev/null; git rm -rf . >/dev/null 2>&1 || true )
 fi
 
-echo "Updating charts/${SHA} on ${DOCS_BRANCH} (pruning old chart folders)..."
-rm -rf "$TMP_DOCS_DIR/charts"
-mkdir -p "$TMP_DOCS_DIR/charts/${SHA}"
-cp -R "$TMP_CHARTS_DIR/." "$TMP_DOCS_DIR/charts/${SHA}/"
+# Sequence within this version: charts/v<version>/<NN>-<sha>/, zero-padded so the
+# folders sort lexically and the highest NN is the latest update for the version.
+# Re-publishing the same commit reuses (overwrites) its existing folder.
+VERDIR="$TMP_DOCS_DIR/charts/v${VERSION}"
+mkdir -p "$VERDIR"
+existing="$(ls -1d "$VERDIR"/*-"${SHA}" 2>/dev/null | head -1 || true)"
+if [[ -n "$existing" ]]; then
+  DEST="v${VERSION}/$(basename "$existing")"
+else
+  last="$(ls -1 "$VERDIR" 2>/dev/null | grep -oE '^[0-9]+' | sort -n | tail -1 || true)"
+  SEQ="$(printf '%02d' "$(( 10#${last:-0} + 1 ))")"
+  DEST="v${VERSION}/${SEQ}-${SHA}"
+fi
+
+echo "Updating charts/${DEST} on ${DOCS_BRANCH}..."
+rm -rf "$TMP_DOCS_DIR/charts/${DEST}"
+mkdir -p "$TMP_DOCS_DIR/charts/${DEST}"
+cp -R "$TMP_CHARTS_DIR/." "$TMP_DOCS_DIR/charts/${DEST}/"
 
 (
   cd "$TMP_DOCS_DIR"
   git add -A charts
   if git diff --cached --quiet; then
-    echo "No chart changes to publish for ${SHA}."
+    echo "No chart changes to publish for ${DEST}."
     exit 0
   fi
   git config user.name "${GIT_AUTHOR_NAME:-$(git config --get user.name || echo zmij-as)}"
   git config user.email "${GIT_AUTHOR_EMAIL:-$(git config --get user.email || echo zmij-as@example.com)}"
-  git commit -m "Update benchmark charts for ${SHA} [skip ci]" >/dev/null
+  git commit -m "Update benchmark charts for ${DEST} [skip ci]" >/dev/null
   git push "$REMOTE_NAME" "$DOCS_BRANCH"
 )
 
-# Re-pin the README chart <img> URLs to the commit just published, so a README
-# revision references the charts built from its own code. Left uncommitted.
-echo "Pinning README chart URLs to ${SHA}..."
-sed -i -E "s#(/docs/charts/)[^/]+/#\1${SHA}/#g" README.md
+# Re-pin the README chart <img> URLs to the version/commit just published, so a
+# README revision references the charts built from its own code. Left uncommitted.
+echo "Pinning README chart URLs to ${DEST}..."
+sed -i -E "s#(/docs/charts/)[^\"']*/([^/\"']+\.png)#\1${DEST}/\2#g" README.md
 
-echo "Charts published to ${REMOTE_NAME}/${DOCS_BRANCH}:charts/${SHA}/ (old folders pruned)"
-echo "README pinned to https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/${SHA}/"
+echo "Charts published to ${REMOTE_NAME}/${DOCS_BRANCH}:charts/${DEST}/ (old folders pruned)"
+echo "README pinned to https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/${DEST}/"
