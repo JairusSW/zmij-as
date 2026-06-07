@@ -92,19 +92,6 @@ logical end by up to one 8-char block.
 
 ## Performance
 
-node/V8, ns per conversion (lower is better):
-
-| path | f64 | f32 | vs AS-std |
-|---|---|---|---|
-| `dtoa_buffered` / `ftoa_buffered` (UTF-16, no alloc) | ~19–22 | ~16–18 | **~3–4× vs `.toString()`** |
-| `dtoa()` (allocates `String`) | ~53 | ~52 | ~1.4× |
-| AS-std `.toString()` (allocates) | ~75–91 | ~83 | 1× |
-
-The buffered writers win because allocation (`__new` + GC, ~35 ns) dominates the
-`String` path. For maximum throughput in a serializer, write into your own buffer
-with the buffered API. All power-of-ten tables are baked at compile time, so there
-is no module-init cost and no runtime LUT construction.
-
 <p align="center">
 <img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/04-e4c0203/dtoa-comp-f64-wavm.png" alt="dtoa (f64) latency vs the AssemblyScript stdlib, by input complexity">
 </p>
@@ -132,7 +119,7 @@ npm test
 
 # build the verify wasm + check against V8 (fixed edge + 2M random; pass a count)
 npm run verify
-node scripts/dtoa/verify.mjs 30000000
+node scripts/dtoa/verify.mjs 3000
 
 # open-ended differential fuzz vs V8 (seeded, repro-friendly; --runs/--time/--seed)
 npm run fuzz
@@ -141,25 +128,10 @@ npm run fuzz
 ## Benchmarks
 
 ```bash
-# benches default to WAVM (AOT, no wasm-opt). Pass --v8 / --wasmtime / --wazero
-# to override. dtoa-*=f64, ftoa-*=f32:
-#   *-comp    zmij vs stdlib latency/throughput by input complexity
-#   *-stages  per-stage breakdown (core / digits / layout+utf16 / string overhead)
-npm run bench                          # all four bench files (wavm)
-npm run bench -- --v8 dtoa-comp ftoa-comp
-
-# render charts from the logs (runtime-suffixed PNGs); also defaults to wavm:
-#   dtoa-comp        latency vs stdlib        dtoa-throughput  MB/s vs stdlib
-#   dtoa-stages      stacked stage breakdown  dtoa-overhead    speedup ratios
-npm run charts:build                   # all charts (wavm)
-npm run charts:build -- --v8 dtoa-stages
+npm run bench -- --v8 --wavm
+npm run charts:build -- --v8 --wavm
+npm run charts:serve
 ```
-
-The stage breakdown shows where a `dtoa()` call spends its time: the numeric work
-(core binary→decimal + digit extraction + layout) is ~20 ns, while the result
-`String` allocation dominates the full `dtoa()`/`ftoa()` cost - use `dtoa_buffered`
-to skip it. The stage hooks live in `assembly/__benches__/stage-hooks.ts`
-(`benchCore*` / `benchDigits*`) and are not part of the public API.
 
 ## Architecture
 
