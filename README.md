@@ -6,7 +6,7 @@
 The fastest <strong>ECMAScript-<code>Number.toString</code>-compatible</strong>
 <code>f64</code>/<code>f32</code> → string for
 <a href="https://www.assemblyscript.org/">AssemblyScript</a>, built on the
-<strong>Żmij</strong> (Schubfach + xjb) core.
+<strong><a href="https://github.com/vitaut/zmij" >Żmij</a></strong> (<a href="https://fmt.dev/papers/Schubfach4.pdf">Schubfach</a> + <a href="https://github.com/xjb714/xjb/blob/81af30358003c98eda6429fbff0d826e0c259302/xjb.pdf">xjb</a>) core.
 </p>
 
 <details>
@@ -106,13 +106,13 @@ with the buffered API. All power-of-ten tables are baked at compile time, so the
 is no module-init cost and no runtime LUT construction.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/03-a1b0d99/dtoa-comp-f64-wavm.png" alt="dtoa (f64) latency vs the AssemblyScript stdlib, by input complexity">
+<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/04-e4c0203/dtoa-comp-f64-wavm.png" alt="dtoa (f64) latency vs the AssemblyScript stdlib, by input complexity">
 </p>
 <p align="center">
-<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/03-a1b0d99/dtoa-comp-f32-wavm.png" alt="ftoa (f32) latency vs the AssemblyScript stdlib, by input complexity">
+<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/04-e4c0203/dtoa-comp-f32-wavm.png" alt="ftoa (f32) latency vs the AssemblyScript stdlib, by input complexity">
 </p>
 <p align="center">
-<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/03-a1b0d99/dtoa-stages-f64-wavm.png" alt="dtoa (f64) per-stage latency breakdown">
+<img src="https://raw.githubusercontent.com/JairusSW/zmij-as/refs/heads/docs/charts/v0.0.0/04-e4c0203/dtoa-stages-f64-wavm.png" alt="dtoa (f64) per-stage latency breakdown">
 </p>
 
 Charts are published per release to the `docs` branch via `npm run charts:publish`
