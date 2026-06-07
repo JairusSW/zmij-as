@@ -14,6 +14,8 @@
 #               (no auto-GC).
 #   --memory    Enable as-heap-analyzer; bench output includes per-class
 #               retained/in-flight bytes
+#   --no-wasm-opt  Skip the wasm-opt -O4 post-pass (it runs by default for every
+#               runtime, including WAVM, when wasm-opt is on PATH)
 #   --list      List discoverable bench files and exit
 #   --help, -h  Show this help and exit
 #
@@ -40,6 +42,21 @@ RUN_WASMTIME=0
 RUN_WAZERO=0
 BENCH_MEMORY=0
 AS_RUNTIME="incremental"
+WASM_OPT=1 # run wasm-opt for every runtime by default; --no-wasm-opt disables
+# Shared wasm-opt flags — fastest-possible/speed-biased, including the optional
+# aggressive passes (sign-ext is added for the wasi builds, which enable it):
+#   -O4               highest optimize level
+#   --shrink-level=0  favour speed over size
+#   --converge        re-run the pipeline to fixpoint (squeeze out everything)
+#   --traps-never-happen / --ignore-implicit-traps   assume no traps -> more opts
+#   --inline-functions-with-loops                    inline even loopy callees
+# (--fast-math is intentionally NOT used: it reorders float ops and would make
+#  the benchmarked build diverge from the bit-exact shipping build.)
+WASM_OPT_FLAGS=(
+  --enable-bulk-memory --enable-simd --enable-nontrapping-float-to-int --enable-tail-call
+  -O4 --shrink-level=0 --converge
+  --traps-never-happen --ignore-implicit-traps --inline-functions-with-loops
+)
 
 read -r -a WAVM_RUN_FLAGS_ARR <<< "$WAVM_RUN_FLAGS"
 read -r -a WASMTIME_RUN_FLAGS_ARR <<< "$WASMTIME_RUN_FLAGS"
@@ -70,6 +87,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --memory)
       BENCH_MEMORY=1
+      shift
+      ;;
+    --no-wasm-opt)
+      WASM_OPT=0
       shift
       ;;
     --list)
@@ -105,7 +126,7 @@ if [[ $BENCH_MEMORY -eq 1 ]]; then
 fi
 
 if [[ $RUN_V8 -eq 0 && $RUN_WAVM -eq 0 && $RUN_WASMTIME -eq 0 && $RUN_WAZERO -eq 0 ]]; then
-  RUN_WAVM=1 # default: WAVM (AOT, no wasm-opt - closest to real codegen). Pass --v8 to override.
+  RUN_WAVM=1 # default: WAVM (LLVM AOT). Pass --v8 etc. to override. wasm-opt -O4 runs unless --no-wasm-opt.
 fi
 
 if [[ $RUN_V8 -eq 1 ]]; then
@@ -243,11 +264,12 @@ run_wazero_module() {
 optimize_or_fallback() {
   local in_wasm="$1"
   local out_wasm="$2"
-  if command -v wasm-opt >/dev/null 2>&1; then
-    shift 2
+  shift 2
+  if [[ "$WASM_OPT" == "1" ]] && command -v wasm-opt >/dev/null 2>&1; then
     wasm-opt "$@" "$in_wasm" -o "$out_wasm"
     rm -f "$in_wasm"
   else
+    [[ "$WASM_OPT" == "1" ]] && echo "  (wasm-opt not found on PATH; using raw asc output)"
     mv "$in_wasm" "$out_wasm"
   fi
 }
@@ -257,7 +279,7 @@ build_v8() {
   local output="$2"
 
   npx asc "$file" -o "${output}.tmp" -O3 --converge --noAssert --uncheckedBehavior always --runtime "$AS_RUNTIME" --enable bulk-memory --enable simd --exportStart start --exportRuntime "${MEMORY_ASC_ARGS[@]}"
-  optimize_or_fallback "${output}.tmp" "$output" --enable-bulk-memory --enable-simd --enable-nontrapping-float-to-int --enable-tail-call -tnh -iit -ifwl -s 0 -O4
+  optimize_or_fallback "${output}.tmp" "$output" "${WASM_OPT_FLAGS[@]}"
 }
 
 build_wasi() {
@@ -265,7 +287,8 @@ build_wasi() {
   local output="$2"
   local runtime_flag="$3"
 
-  npx asc "$file" -o "$output" -O3 --converge --noAssert --uncheckedBehavior always --runtime "$AS_RUNTIME" --config ./node_modules/@assemblyscript/wasi-shim/asconfig.json --use "$runtime_flag=1" --enable bulk-memory --enable simd --enable sign-extension --exportRuntime "${MEMORY_ASC_ARGS[@]}"
+  npx asc "$file" -o "${output}.tmp" -O3 --converge --noAssert --uncheckedBehavior always --runtime "$AS_RUNTIME" --config ./node_modules/@assemblyscript/wasi-shim/asconfig.json --use "$runtime_flag=1" --enable bulk-memory --enable simd --enable sign-extension --exportRuntime "${MEMORY_ASC_ARGS[@]}"
+  optimize_or_fallback "${output}.tmp" "$output" --enable-sign-ext "${WASM_OPT_FLAGS[@]}"
 }
 
 for file in "${FILES[@]}"; do

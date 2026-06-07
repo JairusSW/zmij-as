@@ -12,6 +12,9 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { ChartJSNodeCanvas } from "chartjs-node-canvas";
 import ChartDataLabels from "chartjs-plugin-datalabels";
+import { BARS, GRAY, INK } from "./palette.mjs";
+
+export { INK, STAGE_BARS } from "./palette.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const LOGS_DIR = path.join(ROOT, "build", "logs", "as");
@@ -71,17 +74,8 @@ export function subtitle() {
     return tokens.join(" • ");
 }
 
-// Palette index - overflow falls back to the gray catch-all.
-const PALETTE = [
-    { fill: "rgba(37, 99, 235, 0.85)", border: "#1d4ed8" }, // blue (baseline)
-    { fill: "rgba(22, 163, 74, 0.85)", border: "#15803d" }, // green (ours)
-    { fill: "rgba(239, 68, 68, 0.85)", border: "#dc2626" }, // red
-    { fill: "rgba(168, 85, 247, 0.85)", border: "#7e22ce" }, // purple
-    { fill: "rgba(234, 179, 8, 0.85)", border: "#ca8a04" }, // amber
-    { fill: "rgba(20, 184, 166, 0.85)", border: "#0d9488" }, // teal
-];
-const GRAY = { fill: "rgba(107, 114, 128, 0.85)", border: "#4b5563" };
-const colorFor = (i) => PALETTE[i] ?? GRAY;
+// Series colours come from the shared json-as palette; overflow -> GRAY.
+const colorFor = (i) => BARS[i] ?? GRAY;
 
 /**
  * Build a grouped-bar chart config.
@@ -101,11 +95,11 @@ export function createBarChart(data, opts = {}) {
     const metric = opts.metric ?? "mbps";
 
     const datasets = seriesLabels.map((label, i) => {
-        const { fill, border } = colorFor(i);
+        const { bg, border } = colorFor(i);
         return {
             label,
             data: groups.map((g) => data[g][label]?.[metric] ?? 0),
-            backgroundColor: fill,
+            backgroundColor: bg,
             borderColor: border,
             borderWidth: 1,
         };
@@ -127,8 +121,10 @@ export function createBarChart(data, opts = {}) {
                 subtitle: {
                     display: true,
                     text: opts.subtitle ?? subtitle(),
-                    color: "#475569",
-                    padding: { bottom: 10 },
+                    position: "right", // vertical sidebar on the right edge
+                    font: { size: 14, weight: "bold" },
+                    color: INK.subtitle,
+                    padding: 16,
                 },
                 legend: { position: "top", labels: { font: { size: 13 } } },
                 datalabels: {
@@ -150,14 +146,19 @@ export function createBarChart(data, opts = {}) {
                     title: {
                         display: true,
                         text: opts.yLabel ?? metricLabel(metric),
+                        color: INK.label,
                     },
+                    ticks: { color: INK.label },
+                    grid: { color: INK.grid },
                 },
                 x: {
                     ticks: {
                         font: { size: 11 },
+                        color: INK.label,
                         maxRotation: opts.xRotation ?? 45,
                         minRotation: opts.xRotation ?? 45,
                     },
+                    grid: { color: INK.grid },
                 },
             },
         },
@@ -186,7 +187,7 @@ function getCanvas(width, height) {
             new ChartJSNodeCanvas({
                 width,
                 height,
-                backgroundColour: "white",
+                backgroundColour: "transparent",
                 chartCallback: (ChartJS) => ChartJS.register(ChartDataLabels),
             }),
         );

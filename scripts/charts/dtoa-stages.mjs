@@ -22,6 +22,8 @@ import {
     subtitle,
     RUNTIME,
     fmtNs1,
+    INK,
+    STAGE_BARS,
 } from "../lib/bench-chart.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
@@ -50,12 +52,12 @@ const BUCKETS_F32 = [
     ["randomish", "randomish", 16],
 ];
 
-// Stacked stages, bottom -> top, with their fill colors.
+// Stacked stages, bottom -> top, coloured from the shared json-as palette.
 const STAGES = [
-    ["core", "core (binary->decimal)", "rgba(37, 99, 235, 0.85)", "#1d4ed8"],
-    ["digits", "digits (->ASCII)", "rgba(22, 163, 74, 0.85)", "#15803d"],
-    ["noallocRest", "layout + UTF-16", "rgba(234, 179, 8, 0.85)", "#ca8a04"],
-    ["stringOverhead", "string overhead", "rgba(239, 68, 68, 0.85)", "#dc2626"],
+    ["core", "core (binary->decimal)", STAGE_BARS.core.bg, STAGE_BARS.core.border],
+    ["digits", "digits (->ASCII)", STAGE_BARS.digits.bg, STAGE_BARS.digits.border],
+    ["noallocRest", "layout + UTF-16", STAGE_BARS.noallocRest.bg, STAGE_BARS.noallocRest.border],
+    ["stringOverhead", "string overhead", STAGE_BARS.stringOverhead.bg, STAGE_BARS.stringOverhead.border],
 ];
 
 const ns = (prefix, bucket, stem) => {
@@ -128,8 +130,10 @@ function makeConfig(breakdown, title) {
                     text:
                         subtitle() +
                         " • stacked stages sum to full dtoa() cost",
-                    color: "#475569",
-                    padding: { bottom: 10 },
+                    position: "right", // vertical sidebar on the right edge
+                    font: { size: 14, weight: "bold" },
+                    color: INK.subtitle,
+                    padding: 16,
                 },
                 legend: { position: "top", labels: { font: { size: 13 } } },
                 datalabels: {
@@ -146,9 +150,11 @@ function makeConfig(breakdown, title) {
                     stacked: true,
                     ticks: {
                         font: { size: 11 },
+                        color: INK.label,
                         maxRotation: 30,
                         minRotation: 30,
                     },
+                    grid: { color: INK.grid },
                 },
                 y: {
                     stacked: true,
@@ -157,7 +163,10 @@ function makeConfig(breakdown, title) {
                     title: {
                         display: true,
                         text: "ns per conversion (lower is better)",
+                        color: INK.label,
                     },
+                    ticks: { color: INK.label },
+                    grid: { color: INK.grid },
                 },
             },
         },

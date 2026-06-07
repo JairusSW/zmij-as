@@ -34,7 +34,7 @@
     "scripts": {
         "test": "ast test",
         "gen-spec": "node scripts/dtoa/gen-spec.mjs",
-        "verify:build": "asc assembly/dtoa.ts -o build/dtoa.wasm -O3 --noAssert --uncheckedBehavior always --enable simd --enable bulk-memory --enable sign-extension --runtime stub",
+        "verify:build": "asc assembly/dtoa.ts -o build/dtoa.wasm -O3 --converge --noAssert --uncheckedBehavior always --enable simd --enable bulk-memory --enable sign-extension --runtime stub",
         "verify": "npm run verify:build && node scripts/dtoa/verify.mjs",
         "fuzz": "npm run verify:build && node scripts/dtoa/fuzz.mjs",
         "fuzz:quick": "npm run verify:build && node scripts/dtoa/fuzz.mjs --runs 500000",
