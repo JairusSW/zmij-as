@@ -53,10 +53,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-  echo "Refusing to publish with a dirty tracked working tree. Commit or stash first."
-  exit 1
-fi
+# A dirty working tree is fine: charts are committed on a separate `docs`
+# worktree, so the publish never touches the current branch's tracked files.
 
 if [[ "$RUN_BENCHES" == "1" ]]; then
   for rt in "${RT_ARGS[@]}"; do

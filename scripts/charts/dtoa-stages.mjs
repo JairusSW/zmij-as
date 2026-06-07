@@ -127,9 +127,7 @@ function makeConfig(breakdown, title) {
                 },
                 subtitle: {
                     display: true,
-                    text:
-                        subtitle() +
-                        " • stacked stages sum to full dtoa() cost",
+                    text: subtitle(),
                     position: "right", // vertical sidebar on the right edge
                     font: { size: 14, weight: "bold" },
                     color: INK.subtitle,
@@ -150,7 +148,7 @@ function makeConfig(breakdown, title) {
                     stacked: true,
                     ticks: {
                         font: { size: 11 },
-                        color: INK.label,
+                        color: INK.subtitle,
                         maxRotation: 30,
                         minRotation: 30,
                     },
@@ -163,9 +161,13 @@ function makeConfig(breakdown, title) {
                     title: {
                         display: true,
                         text: "ns per conversion (lower is better)",
-                        color: INK.label,
+                        color: INK.subtitle,
+                        font: { size: 16, weight: "bold" },
                     },
-                    ticks: { color: INK.label },
+                    ticks: {
+                        color: INK.subtitle,
+                        font: { size: 13, weight: "bold" },
+                    },
                     grid: { color: INK.grid },
                 },
             },

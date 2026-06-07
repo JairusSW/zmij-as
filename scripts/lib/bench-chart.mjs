@@ -50,27 +50,38 @@ export function loadResults(stems) {
  */
 export const fmtNs1 = (v) => parseFloat(Number(v).toFixed(1)).toString();
 
-/** Git/version subtitle. Best-effort - silently degrades if shell commands fail. */
+/** Sidebar text, matching json-as's format:
+ *  `<date> • v<version> • <engine> [ver] • <hash> • <branch>`.
+ *  Best-effort - missing tokens (engine version / git) are silently dropped. */
 export function subtitle() {
+    const sh = (cmd) =>
+        execSync(cmd, { cwd: ROOT, stdio: ["ignore", "pipe", "ignore"] })
+            .toString()
+            .trim();
     const tokens = [new Date().toDateString()];
     try {
-        const v = JSON.parse(
-            fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
-        ).version;
-        if (v && v !== "0.0.0") tokens.push("v" + v);
-    } catch {}
-    try {
         tokens.push(
-            "git " +
-                execSync("git rev-parse --short HEAD", {
-                    cwd: ROOT,
-                    stdio: ["ignore", "pipe", "ignore"],
-                })
-                    .toString()
-                    .trim(),
+            "v" +
+                JSON.parse(
+                    fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
+                ).version,
         );
     } catch {}
-    tokens.push("runtime: " + RUNTIME);
+    // Engine token, mirroring json-as's "v8 <version>" but for the active runtime.
+    let engine = RUNTIME;
+    try {
+        const m = sh(`${RUNTIME} --version`)
+            .split("\n")[0]
+            .match(/\d+\.\d+(?:\.\d+)?/);
+        if (m) engine += " " + m[0];
+    } catch {}
+    tokens.push(engine);
+    try {
+        tokens.push(sh("git rev-parse --short HEAD"));
+    } catch {}
+    try {
+        tokens.push(sh("git rev-parse --abbrev-ref HEAD"));
+    } catch {}
     return tokens.join(" • ");
 }
 
@@ -146,15 +157,19 @@ export function createBarChart(data, opts = {}) {
                     title: {
                         display: true,
                         text: opts.yLabel ?? metricLabel(metric),
-                        color: INK.label,
+                        color: INK.subtitle,
+                        font: { size: 16, weight: "bold" },
                     },
-                    ticks: { color: INK.label },
+                    ticks: {
+                        color: INK.subtitle,
+                        font: { size: 13, weight: "bold" },
+                    },
                     grid: { color: INK.grid },
                 },
                 x: {
                     ticks: {
                         font: { size: 11 },
-                        color: INK.label,
+                        color: INK.subtitle,
                         maxRotation: opts.xRotation ?? 45,
                         minRotation: opts.xRotation ?? 45,
                     },
@@ -188,7 +203,11 @@ function getCanvas(width, height) {
                 width,
                 height,
                 backgroundColour: "transparent",
-                chartCallback: (ChartJS) => ChartJS.register(ChartDataLabels),
+                chartCallback: (ChartJS) => {
+                    ChartJS.register(ChartDataLabels);
+                    // All chart text defaults to the sidebar ink.
+                    ChartJS.defaults.color = INK.subtitle;
+                },
             }),
         );
     }
