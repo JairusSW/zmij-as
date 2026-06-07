@@ -3,7 +3,7 @@
 #
 #   ./scripts/build-charts.sh                # wavm (default)
 #   ./scripts/build-charts.sh --v8
-#   ./scripts/build-charts.sh --wazero
+#   ./scripts/build-charts.sh --wavm --v8    # multiple runtimes in one run
 #   ./scripts/build-charts.sh --wavm chart1  # only chart1.mjs
 #
 # Files starting with `_` (e.g. `_template.mjs`) are skipped. Charts read
@@ -15,14 +15,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-RUNTIME="wavm" # default; pass --v8 / --wazero to override
+RUNTIMES=() # one or more; defaults to wavm if none given
 TARGETS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --v8)     RUNTIME="v8";     shift ;;
-    --wavm)   RUNTIME="wavm";   shift ;;
-    --wazero) RUNTIME="wazero"; shift ;;
+    --v8)     RUNTIMES+=("v8");     shift ;;
+    --wavm)   RUNTIMES+=("wavm");   shift ;;
+    --wazero) RUNTIMES+=("wazero"); shift ;;
     --list)
       echo "Available charts:"
       for f in ./scripts/charts/*.mjs; do
@@ -66,9 +66,13 @@ if [[ ${#FILES[@]} -eq 0 ]]; then
   exit 0
 fi
 
+[[ ${#RUNTIMES[@]} -eq 0 ]] && RUNTIMES=("wavm")
+
 mkdir -p ./charts
 
-echo "Building ${#FILES[@]} chart(s) for runtime: $RUNTIME"
-for f in "${FILES[@]}"; do
-  BENCH_CHART_RUNTIME="$RUNTIME" node "$f"
+for rt in "${RUNTIMES[@]}"; do
+  echo "Building ${#FILES[@]} chart(s) for runtime: $rt"
+  for f in "${FILES[@]}"; do
+    BENCH_CHART_RUNTIME="$rt" node "$f"
+  done
 done

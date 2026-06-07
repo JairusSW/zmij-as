@@ -137,7 +137,10 @@ export function createBarChart(data, opts = {}) {
                     color: INK.subtitle,
                     padding: 16,
                 },
-                legend: { position: "top", labels: { font: { size: 13 } } },
+                legend: {
+                    position: "top",
+                    labels: { font: { size: 13, weight: "bold" } },
+                },
                 datalabels: {
                     anchor: "end",
                     align: "start",

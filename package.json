@@ -1,6 +1,6 @@
 {
     "name": "zmij-as",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "description": "ECMAScript-compatible f64/f32 to string (dtoa/ftoa) for AssemblyScript, built on the Żmij (Schubfach + xjb) core",
     "type": "module",
     "license": "MIT",

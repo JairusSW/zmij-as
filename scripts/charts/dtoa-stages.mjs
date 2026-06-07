@@ -133,7 +133,10 @@ function makeConfig(breakdown, title) {
                     color: INK.subtitle,
                     padding: 16,
                 },
-                legend: { position: "top", labels: { font: { size: 13 } } },
+                legend: {
+                    position: "top",
+                    labels: { font: { size: 13, weight: "bold" } },
+                },
                 datalabels: {
                     color: "#fff",
                     font: { size: 10, weight: "bold" },
